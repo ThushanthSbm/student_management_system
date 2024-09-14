@@ -9,6 +9,6 @@ class StudentFacade extends Facade
 {
     protected static function getFacadeAccessor()
     {
-        return StudentService::class;
+        return StudentService::class; // This should match the service provider binding
     }
 }

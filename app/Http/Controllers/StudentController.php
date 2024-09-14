@@ -3,14 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Student;
+use App\Models\Grade;
+use App\Models\Subject;
 use domain\Facades\StudentFacade;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 
 class StudentController extends Controller
 {
-
-    // show the metrics on dashboard
+    // Show the metrics on the dashboard
     public function dashboard()
     {
         $totalStudents = StudentFacade::getTotalStudentsCount();
@@ -23,7 +24,7 @@ class StudentController extends Controller
         return Inertia::render('Dashboard', compact('totalStudents', 'inactiveStudents', 'activeStudents', 'newStudentsDaily', 'newStudentsWeekly', 'newStudentsMonthly'));
     }
 
-    // show the list of students
+    // Show the list of students
     public function index()
     {
         return Inertia::render('Students/Index', [
@@ -31,37 +32,85 @@ class StudentController extends Controller
         ]);
     }
 
-    // show the create form
+    // Show the create form
     public function create()
     {
-        return Inertia::render('Students/Create');
+        // Fetch grades and subjects to populate the form
+        $grades = Grade::all();
+        $subjects = Subject::all();
+
+        return Inertia::render('Students/Create', [
+            'grades' => $grades,
+            'subjects' => $subjects,
+        ]);
     }
 
-    // create a new student
+    // Create a new student
     public function store(Request $request)
-
     {
-        StudentFacade::store($request);
-        return redirect()->route('students.index');
+        // Validate request data
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            'age' => 'required|integer|min:1',
+            'status' => 'required|boolean',
+            'grade_id' => 'required|exists:grades,id',
+            'subject_ids' => 'required|array',
+            'subject_ids.*' => 'exists:subjects,id',
+        ]);
+
+        // Create the student
+    $student = Student::create($request->all());
+
+    // Attach subjects to the student
+    $student->subjects()->sync($request->subject_ids);
+
+    return redirect()->route('students.index');
+
     }
 
-    // show the edit form
+    // Show the edit form
     public function edit(Student $student)
-    {
-        $data = StudentFacade::edit($student);
+{
+    // Fetch grades and subjects to populate the form
+    $grades = Grade::all();
+    $subjects = Subject::all();
 
-        return Inertia::render('Students/Edit', $data);
-    }
+    $data = StudentFacade::edit($student);
 
-    // update the student
+    return Inertia::render('Students/Edit', [
+        'student' => $data,
+        'grades' => $grades,
+        'subjects' => $subjects,
+    ]);
+}
+
+
+    // Update the student
     public function update(Request $request, Student $student)
-    {
-        StudentFacade::update($request, $student);
+{
+    // Validate request data
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'age' => 'required|integer|min:1',
+        'status' => 'required|boolean',
+        'grade_id' => 'required|exists:grades,id',
+        'subject_ids' => 'required|array',
+        'subject_ids.*' => 'exists:subjects,id',
+        'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+    ]);
 
-        return redirect()->route('students.index');
-    }
+    // Update the student
+    $student->update($request->except('subject_ids'));
 
-    // update the status of the student
+    // Sync subjects
+    $student->subjects()->sync($request->subject_ids);
+
+    return redirect()->route('students.index');
+}
+
+
+    // Update the status of the student
     public function status(Student $student)
     {
         StudentFacade::updateStatus($student);
@@ -69,7 +118,7 @@ class StudentController extends Controller
         return redirect()->route('students.index');
     }
 
-    // delete the student
+    // Delete the student
     public function destroy(Student $student)
     {
         StudentFacade::destroy($student);

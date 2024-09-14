@@ -1,69 +1,29 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
-import { onMounted, ref } from "vue";
-import axios from 'axios';
-
-const grades = ref([]);
-const subjects = ref([]);
 
 const form = useForm({
     name: null,
-    age: null,
     status: null,
-    image: null,
-    grade_id: null,
-    subject_ids: [],  // Multiple subject selection
+    
 });
 
-// onMounted(() => {
-//     axios.get("/api/grades").then(response => {
-//         grades.value = response.data;
-//         //console.log("Grades fetched:", response.data);
-//     });
-
-//     axios.get("/api/subjects").then(response => {
-//         subjects.value = response.data;
-//         //console.log("Subjects fetched:", response.data);
-//     });
-// });
-
-onMounted(() => {
-    axios.get("/api/grades")
-        .then(response => {
-            grades.value = response.data;
-            console.log("Grades fetched:", response.data);
-        })
-        .catch(error => {
-            console.error("Error fetching grades:", error);
-        });
-
-    axios.get("/api/subjects")
-        .then(response => {
-            subjects.value = response.data;
-            console.log("Subjects fetched:", response.data);
-        })
-        .catch(error => {
-            console.error("Error fetching subjects:", error);
-        });
-});
-
-
-function storeStudent() {
-    form.post("/students", {
+function storeGrade() {
+    form.post("/grades", {
         onSuccess: () => {
             form.reset();
         },
     });
 }
 </script>
+
 <template>
-    <Head title="Students" />
+    <Head title="Grades" />
 
     <AuthenticatedLayout>
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Students
+                Grades
             </h2>
         </template>
 
@@ -71,75 +31,40 @@ function storeStudent() {
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="flex m-2 p-2">
                     <Link
-                        href="/students"
+                        href="/grades"
                         class="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded"
-                    >Back</Link>
+                        >Back</Link
+                    >
                 </div>
                 <div>
+                    <!-- component -->
                     <div class="bg-grey-lighter min-h-screen flex flex-col">
                         <div
                             class="container max-w-xl mx-auto flex-1 flex flex-col items-center justify-center px-2"
                         >
                             <form
-                                @submit.prevent="storeStudent"
+                                @submit.prevent="storeGrade"
                                 class="bg-white px-6 py-8 rounded shadow-md text-black w-full"
                             >
                                 <h1 class="mb-8 text-3xl text-center">
-                                    Create a Student
+                                    Create a Grade
                                 </h1>
 
-                                <!-- Full Name -->
-                                <label for="name">Full Name</label>
+                                <label for="name">Grade Name</label>
                                 <input
                                     type="text"
                                     v-model="form.name"
                                     class="block mt-2 border border-grey-light w-full p-3 rounded mb-4"
                                     name="name"
-                                    placeholder="Full Name"
+                                    placeholder="Grade Name"
                                 />
+                               
 
-                                <!-- Age -->
-                                <label for="age">Age</label>
-                                <input
-                                    type="number"
-                                    v-model="form.age"
-                                    class="block mt-2 border border-grey-light w-full p-3 rounded mb-4"
-                                    name="age"
-                                    placeholder="age"
-                                />
+                                <label for="status"> Status </label>
 
-                                <!-- Grade Dropdown -->
-                                <label for="grade">Grade</label> 
-                                <select
-                                    v-model="form.grade_id"
-                                    class="block mt-2 border border-grey-light w-full p-3 rounded mb-4"
-                                    name="grade"
+                                <div
+                                    class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 py-4"
                                 >
-                                    <option disabled value="">Select Grade</option>
-                                    <option v-for="grade in grades" :key="grade.id" :value="grade.id">
-                                        {{ grade.name }}
-                                    </option>
-                                </select>
-
-                                <!-- Subject Multi-Select -->
-                                <label for="subjects">Subjects</label>
-                                    <div class="block mt-2 border border-grey-light w-full p-3 rounded mb-4">
-                                        <div v-for="subject in subjects" :key="subject.id" class="mb-2">
-                                            <input
-                                                type="checkbox"
-                                                :id="'subject-' + subject.id"
-                                                :value="subject.id"
-                                                v-model="form.subject_ids"
-                                                name="subject_ids[]"
-                                            />
-                                            <label :for="'subject-' + subject.id">{{ subject.name }}</label>
-                                        </div>
-                                    </div>
-
-
-                                <!-- Status Radio Buttons -->
-                                <label for="status">Status</label>
-                                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 py-4">
                                     <label>
                                         <input
                                             type="radio"
@@ -148,10 +73,15 @@ function storeStudent() {
                                             class="peer hidden"
                                             name="status"
                                         />
+
                                         <div
                                             class="hover:bg-gray-50 flex items-center justify-between px-4 py-2 border-2 rounded-lg cursor-pointer text-sm border-gray-200 group peer-checked:border-blue-500"
                                         >
-                                            <h2 class="font-medium text-gray-700">Active</h2>
+                                            <h2
+                                                class="font-medium text-gray-700"
+                                            >
+                                                Active
+                                            </h2>
                                             <svg
                                                 xmlns="http://www.w3.org/2000/svg"
                                                 fill="none"
@@ -177,10 +107,15 @@ function storeStudent() {
                                             class="peer hidden"
                                             name="status"
                                         />
+
                                         <div
                                             class="hover:bg-gray-50 flex items-center justify-between px-4 py-2 border-2 rounded-lg cursor-pointer text-sm border-gray-200 group peer-checked:border-blue-500"
                                         >
-                                            <h2 class="font-medium text-gray-700">Inactive</h2>
+                                            <h2
+                                                class="font-medium text-gray-700"
+                                            >
+                                                Inactive
+                                            </h2>
                                             <svg
                                                 xmlns="http://www.w3.org/2000/svg"
                                                 fill="none"
@@ -199,22 +134,11 @@ function storeStudent() {
                                     </label>
                                 </div>
 
-                                <!-- Image Upload -->
-                                <label for="image" class="sr-only">Choose Image</label>
-                                <input
-                                    type="file"
-                                    name="image"
-                                    id="image"
-                                    @input="form.image = $event.target.files[0]"
-                                    class="block w-full mb-4 mt-4 border border-gray-200 shadow-sm rounded-lg text-sm"
-                                />
-
-                                <!-- Submit Button -->
                                 <button
                                     type="submit"
                                     class="w-full text-center py-3 rounded bg-indigo-500 hover:bg-indigo-600 text-white focus:outline-none my-1"
                                 >
-                                    Create Student
+                                    Create Grade
                                 </button>
                             </form>
                         </div>

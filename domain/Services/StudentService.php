@@ -5,137 +5,147 @@ namespace domain\Services;
 use App\Models\Student;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 
 class StudentService
 {
-
     protected $student;
 
-    // constructor
-    public function __construct()
+    // Constructor with dependency injection
+    public function __construct(Student $student)
     {
-        $this->student = new Student();
+        $this->student = $student;
     }
 
-
-    // return all the students
+    // Return all students
     public function all()
     {
-        return $this->student->all()->map(function ($student) {
+        return $this->student->with(['grade', 'subjects'])->get()->map(function ($student) {
             return [
                 "id" => $student->id,
                 "name" => $student->name,
-                'image' => Storage::url("{$student->image}"),
+                'image' => Storage::url($student->image),
                 "age" => $student->age,
                 "status" => $student->status,
+                "grade" => $student->grade ? $student->grade->name : null,
+                "subjects" => $student->subjects->pluck('name')->toArray(), // Assuming 'subjects' is a relationship
             ];
         });
     }
 
-    // create a new student
+    // Create a new student
     public function store($data)
     {
-        // the image is stored in the public folder
-        $file = $data->file('image');
-        $disk = 'public';
-        $filename = time() . '_' . $file->getClientOriginalName();
-        $path = $file->storeAs('students', $filename, $disk);
-
-        // validate the data
         $data->validate([
-            "name" => "required",
-            "image" => "required",
-            "age" => "required",
-            "status" => "required",
+            "name" => "required|string|max:255",
+            "image" => "required|image|mimes:jpeg,png,jpg|max:2048",
+            "age" => "required|integer|min:1",
+            "status" => "required|boolean",
+            "grade_id" => "required|exists:grades,id",
+            "subject_ids" => "required|array", // Updated to handle multiple subjects
+            "subject_ids.*" => "exists:subjects,id", // Each subject_id should be valid
         ]);
 
-        //
-        Student::create([
+        // Handle image upload
+        $imagePath = $this->handleImageUpload($data->file('image'));
+
+        // Create student record
+        $student = $this->student->create([
             "name" => $data->name,
-            "image" => $path,
+            "image" => $imagePath,
             "age" => $data->age,
             "status" => $data->status,
+            "grade_id" => $data->grade_id,
         ]);
+
+        // Attach subjects to student
+        $student->subjects()->sync($data->subject_ids);
     }
 
-    // return the current student
-    public function edit($student)
+    // Edit a student
+    public function edit(Student $student)
     {
         return [
             "student" => $student,
-            "image" => Storage::url("{$student->image}"),
+            "image" => Storage::url($student->image),
+            "grade_id" => $student->grade_id,
+            "subject_ids" => $student->subjects->pluck('id')->toArray(), // Updated to handle multiple subjects
         ];
     }
 
-    // update the student
-    public function update($data,  $student)
+    // Update a student
+    public function update($data, Student $student)
     {
-        $image = $student->image;
+        $data->validate([
+            "name" => "required|string|max:255",
+            "age" => "required|integer|min:1",
+            "status" => "required|boolean",
+            "grade_id" => "required|exists:grades,id",
+            "subject_ids" => "required|array", // Updated to handle multiple subjects
+            "subject_ids.*" => "exists:subjects,id", // Each subject_id should be valid
+            "image" => "nullable|image|mimes:jpeg,png,jpg|max:2048",
+        ]);
+
+        $imagePath = $student->image;
 
         if ($data->hasFile('image')) {
-            // delete the old image
-            Storage::delete("public/{$image}");
+            // Delete the old image
+            Storage::delete($student->image);
 
-            $file = $data->file('image');
-            $disk = 'public';
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $path = $file->storeAs('students', $filename, $disk);
-            $image = $path;
+            // Handle new image upload
+            $imagePath = $this->handleImageUpload($data->file('image'));
         }
 
-        // validate the data
-        $data->validate([
-            "name" => "required",
-            "age" => "required",
-            "status" => "required",
-        ]);
-
-        // update the student
+        // Update student record
         $student->update([
             "name" => $data->name,
-            "image" => $image,
+            "image" => $imagePath,
             "age" => $data->age,
             "status" => $data->status,
+            "grade_id" => $data->grade_id,
         ]);
+
+        // Update subjects for student
+        $student->subjects()->sync($data->subject_ids);
     }
 
-    // update the status of the student
-    public function updateStatus($student)
+    // Update the status of a student
+    public function updateStatus(Student $student)
     {
         $student->update([
             "status" => !$student->status,
         ]);
     }
 
-
-    // delete the student
-    public function destroy($student)
+    // Delete a student
+    public function destroy(Student $student)
     {
-        Storage::delete("public", $student->image);
+        Storage::delete($student->image);
+        $student->subjects()->detach(); // Detach subjects before deleting student
         $student->delete();
     }
 
-
     // Dashboard Metrics
 
-    // return the total number of students
+    // Return the total number of students
     public function getTotalStudentsCount()
     {
-        return Student::count();
+        return $this->student->count();
     }
 
-    // return the total number of active students
+    // Return the total number of active students
     public function getActiveStudentsCount()
     {
-        return Student::where('status', true)->count();
+        return $this->student->where('status', true)->count();
     }
 
-    // return the total number of inactive students
+    // Return the total number of inactive students
     public function getInactiveStudentsCount()
     {
-        return Student::where('status', false)->count();
+        return $this->student->where('status', false)->count();
     }
 
+    // Return the count of new students based on the interval
     public function getNewStudentsCount($interval = 'daily')
     {
         $startDate = Carbon::now()->startOfDay();
@@ -154,6 +164,13 @@ class StudentService
                 throw new \InvalidArgumentException('Invalid interval provided');
         }
 
-        return Student::whereBetween('created_at', [$startDate, $endDate])->count();
+        return $this->student->whereBetween('created_at', [$startDate, $endDate])->count();
+    }
+
+    // Handle image upload
+    private function handleImageUpload(UploadedFile $file)
+    {
+        $filename = time() . '_' . $file->getClientOriginalName();
+        return $file->storeAs('students', $filename, 'public');
     }
 }

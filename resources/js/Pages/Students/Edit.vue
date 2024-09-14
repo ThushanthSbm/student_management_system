@@ -1,16 +1,22 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link, useForm, router } from "@inertiajs/vue3";
+import { ref, onMounted } from 'vue';
 
 const props = defineProps({
     student: Object,
     image: String,
+    grades: Array,
+    subjects: Array,
 });
+
 const form = useForm({
     name: props.student.name,
     age: props.student.age,
     status: props.student.status,
     image: null,
+    grade_id: props.student.grade_id,
+    subject_ids: props.student.subject_ids,
 });
 
 function updateStudent() {
@@ -21,10 +27,11 @@ function updateStudent() {
         age: form.age,
         status: form.status,
         image: form.image,
+        grade_id: form.grade_id,
+        subject_ids: form.subject_ids,
     });
 }
 </script>
-
 <template>
     <Head title="Students" />
 
@@ -45,11 +52,8 @@ function updateStudent() {
                     >
                 </div>
                 <div>
-                    <!-- component -->
                     <div class="bg-grey-lighter min-h-screen flex flex-col">
-                        <div
-                            class="container max-w-xl mx-auto flex-1 flex flex-col items-center justify-center px-2"
-                        >
+                        <div class="container max-w-xl mx-auto flex-1 flex flex-col items-center justify-center px-2">
                             <form
                                 @submit.prevent="updateStudent"
                                 class="bg-white px-6 py-8 rounded shadow-md text-black w-full"
@@ -66,6 +70,7 @@ function updateStudent() {
                                     name="name"
                                     placeholder="Full Name"
                                 />
+
                                 <label for="age">Age</label>
                                 <input
                                     type="number"
@@ -75,11 +80,33 @@ function updateStudent() {
                                     placeholder="age"
                                 />
 
-                                <label for="status"> Status </label>
-
-                                <div
-                                    class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 py-4"
+                                <label for="grade">Grade</label>
+                                <select
+                                    v-model="form.grade_id"
+                                    class="block mt-2 border border-grey-light w-full p-3 rounded mb-4"
+                                    name="grade"
                                 >
+                                    <option v-for="grade in grades" :key="grade.id" :value="grade.id">
+                                        {{ grade.name }}
+                                    </option>
+                                </select>
+
+                                <label for="subjects">Subjects</label>
+                                <div class="block mt-2 border border-grey-light w-full p-3 rounded mb-4">
+                                    <div v-for="subject in subjects" :key="subject.id" class="mb-2">
+                                        <input
+                                            type="checkbox"
+                                            :id="'subject-' + subject.id"
+                                            :value="subject.id"
+                                            v-model="form.subject_ids"
+                                            name="subject_ids[]"
+                                        />
+                                        <label :for="'subject-' + subject.id">{{ subject.name }}</label>
+                                    </div>
+                                </div>
+
+                                <label for="status">Status</label>
+                                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 py-4">
                                     <label>
                                         <input
                                             type="radio"
@@ -88,32 +115,13 @@ function updateStudent() {
                                             class="peer hidden"
                                             name="status"
                                         />
-
-                                        <div
-                                            class="hover:bg-gray-50 flex items-center justify-between px-4 py-2 border-2 rounded-lg cursor-pointer text-sm border-gray-200 group peer-checked:border-blue-500"
-                                        >
-                                            <h2
-                                                class="font-medium text-gray-700"
-                                            >
-                                                Active
-                                            </h2>
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke-width="1.5"
-                                                stroke="currentColor"
-                                                class="w-9 h-9 text-blue-600 invisible group-[.peer:checked+&]:visible"
-                                            >
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                />
+                                        <div class="hover:bg-gray-50 flex items-center justify-between px-4 py-2 border-2 rounded-lg cursor-pointer text-sm border-gray-200 group peer-checked:border-blue-500">
+                                            <h2 class="font-medium text-gray-700">Active</h2>
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-9 h-9 text-blue-600 invisible group-[.peer:checked+&]:visible">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                         </div>
                                     </label>
-
                                     <label>
                                         <input
                                             type="radio"
@@ -122,33 +130,16 @@ function updateStudent() {
                                             class="peer hidden"
                                             name="status"
                                         />
-
-                                        <div
-                                            class="hover:bg-gray-50 flex items-center justify-between px-4 py-2 border-2 rounded-lg cursor-pointer text-sm border-gray-200 group peer-checked:border-blue-500"
-                                        >
-                                            <h2
-                                                class="font-medium text-gray-700"
-                                            >
-                                                Inactive
-                                            </h2>
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke-width="1.5"
-                                                stroke="currentColor"
-                                                class="w-9 h-9 text-blue-600 invisible group-[.peer:checked+&]:visible"
-                                            >
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                />
+                                        <div class="hover:bg-gray-50 flex items-center justify-between px-4 py-2 border-2 rounded-lg cursor-pointer text-sm border-gray-200 group peer-checked:border-blue-500">
+                                            <h2 class="font-medium text-gray-700">Inactive</h2>
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-9 h-9 text-blue-600 invisible group-[.peer:checked+&]:visible">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                         </div>
                                     </label>
                                 </div>
 
+                                
                                 <p>Current Image</p>
                                 <img
                                     :src="image"
@@ -157,10 +148,7 @@ function updateStudent() {
                                 />
 
                                 <p class="mt-4 mb-4">Update image</p>
-
-                                <label for="image" class="sr-only"
-                                    >Choose Image</label
-                                >
+                                <label for="image" class="sr-only">Choose Image</label>
                                 <input
                                     type="file"
                                     name="image"
