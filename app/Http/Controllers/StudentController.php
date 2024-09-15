@@ -8,6 +8,7 @@ use App\Models\Subject;
 use domain\Facades\StudentFacade;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class StudentController extends Controller
 {
@@ -70,16 +71,38 @@ class StudentController extends Controller
     }
 
     // Show the edit form
-    public function edit(Student $student)
+//     public function edit(Student $student)
+// {
+//     // Fetch grades and subjects to populate the form
+//     $grades = Grade::all();
+//     $subjects = Subject::all();
+
+//     $data = StudentFacade::edit($student);
+
+//     return Inertia::render('Students/Edit', [
+//         'student' => $data,
+//         'grades' => $grades,
+//         'subjects' => $subjects,
+//     ]);
+// }
+
+public function edit(Student $student)
 {
     // Fetch grades and subjects to populate the form
     $grades = Grade::all();
     $subjects = Subject::all();
 
-    $data = StudentFacade::edit($student);
-
+    // Prepare data for the form
     return Inertia::render('Students/Edit', [
-        'student' => $data,
+        'student' => [
+            'id' => $student->id,
+            'name' => $student->name,           // Ensure name is included
+            'age' => $student->age,             // Ensure age is included
+            'status' => $student->status,       // Ensure status is included
+            'image' => Storage::url($student->image),  // Include image
+            'grade_id' => $student->grade_id,   // Grade ID
+            'subject_ids' => $student->subjects->pluck('id')->toArray(),  // Multiple subjects
+        ],
         'grades' => $grades,
         'subjects' => $subjects,
     ]);
@@ -100,13 +123,11 @@ class StudentController extends Controller
         'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
     ]);
 
-    // Update the student
-    $student->update($request->except('subject_ids'));
+    // Pass the request and student to the service
+   StudentFacade::update($request, $student);
 
-    // Sync subjects
-    $student->subjects()->sync($request->subject_ids);
-
-    return redirect()->route('students.index');
+    // Redirect back to students index page after updating
+    return redirect()->route('students.index')->with('success', 'Student updated successfully!');
 }
 
 

@@ -36,6 +36,13 @@ class StudentService
     // Create a new student
     public function store($data)
     {
+
+         // the image is stored in the public folder
+         $file = $data->file('image');
+         $disk = 'public';
+         $filename = time() . '_' . $file->getClientOriginalName();
+         $path = $file->storeAs('students', $filename, $disk);
+
         $data->validate([
             "name" => "required|string|max:255",
             "image" => "required|image|mimes:jpeg,png,jpg|max:2048",
@@ -46,13 +53,19 @@ class StudentService
             "subject_ids.*" => "exists:subjects,id", // Each subject_id should be valid
         ]);
 
-        // Handle image upload
-        $imagePath = $this->handleImageUpload($data->file('image'));
+        // Handle the image upload, storing in 'public/students' directory
+        // if ($data->hasFile('image')) {
+        //     $file = $data->file('image');
+        //     $filename = time() . '_' . $file->getClientOriginalName();
+        //     $path = $file->storeAs('students', $filename, 'public');
+        // } else {
+        //     $path = null; // Handle the case if image is not provided
+        // }
 
         // Create student record
         $student = $this->student->create([
             "name" => $data->name,
-            "image" => $imagePath,
+            "image" => $path,  // Store the image path
             "age" => $data->age,
             "status" => $data->status,
             "grade_id" => $data->grade_id,
@@ -75,39 +88,44 @@ class StudentService
 
     // Update a student
     public function update($data, Student $student)
-    {
-        $data->validate([
-            "name" => "required|string|max:255",
-            "age" => "required|integer|min:1",
-            "status" => "required|boolean",
-            "grade_id" => "required|exists:grades,id",
-            "subject_ids" => "required|array", // Updated to handle multiple subjects
-            "subject_ids.*" => "exists:subjects,id", // Each subject_id should be valid
-            "image" => "nullable|image|mimes:jpeg,png,jpg|max:2048",
-        ]);
+{
+    // Validate the data within the service (optional if already validated in the controller)
+    $data->validate([
+        "name" => "required|string|max:255",
+        "age" => "required|integer|min:1",
+        "status" => "required|boolean",
+        "grade_id" => "required|exists:grades,id",
+        "subject_ids" => "required|array", // Handle multiple subjects
+        "subject_ids.*" => "exists:subjects,id", // Ensure valid subject IDs
+        "image" => "nullable|image|mimes:jpeg,png,jpg|max:2048",
+    ]);
 
-        $imagePath = $student->image;
+    $imagePath = $student->image; // Keep the old image if a new one isn't uploaded
 
-        if ($data->hasFile('image')) {
-            // Delete the old image
+    // If a new image is uploaded, handle the image upload
+    if ($data->hasFile('image')) {
+        // Delete the old image if it exists
+        if ($student->image) {
             Storage::delete($student->image);
-
-            // Handle new image upload
-            $imagePath = $this->handleImageUpload($data->file('image'));
         }
 
-        // Update student record
-        $student->update([
-            "name" => $data->name,
-            "image" => $imagePath,
-            "age" => $data->age,
-            "status" => $data->status,
-            "grade_id" => $data->grade_id,
-        ]);
-
-        // Update subjects for student
-        $student->subjects()->sync($data->subject_ids);
+        // Handle the new image upload
+        $imagePath = $data->file('image')->store('students', 'public'); // Store in the 'students' directory
     }
+
+    // Update student record with the new data
+    $student->update([
+        "name" => $data->name,
+        "image" => $imagePath, // Updated image or keep old one
+        "age" => $data->age,
+        "status" => $data->status,
+        "grade_id" => $data->grade_id,
+    ]);
+
+    // Sync the subjects (many-to-many relationship)
+    $student->subjects()->sync($data->subject_ids);
+}
+
 
     // Update the status of a student
     public function updateStatus(Student $student)

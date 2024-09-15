@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link, useForm, router } from "@inertiajs/vue3";
-import { ref, onMounted } from 'vue';
+import { watch, onMounted } from "vue";
 
 const props = defineProps({
     student: Object,
@@ -11,12 +11,33 @@ const props = defineProps({
 });
 
 const form = useForm({
-    name: props.student.name,
-    age: props.student.age,
-    status: props.student.status,
+    name: "",
+    age: "",
+    status: "",
     image: null,
-    grade_id: props.student.grade_id,
-    subject_ids: props.student.subject_ids,
+    grade_id: null,
+    subject_ids: [],
+});
+
+onMounted(() => {
+    if (props.student) {
+        form.name = props.student.name;
+        form.age = props.student.age;
+        form.status = props.student.status;
+        form.grade_id = props.student.grade_id;
+        form.subject_ids = props.student.subject_ids;
+        console.log("Initial form data:", form); // Log initial form data here
+    }
+});
+
+watch(() => props.student, (newStudent) => {
+    if (newStudent) {
+        form.name = newStudent.name;
+        form.age = newStudent.age;
+        form.status = newStudent.status;
+        form.grade_id = newStudent.grade_id;
+        form.subject_ids = newStudent.subject_ids;
+    }
 });
 
 function updateStudent() {
@@ -32,6 +53,7 @@ function updateStudent() {
     });
 }
 </script>
+
 <template>
     <Head title="Students" />
 
